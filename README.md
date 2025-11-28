@@ -3,7 +3,9 @@ Palette Pop — Color Palette Extractor
 A single-purpose web tool that extracts all representative colors from any uploaded image.
 Upload → Extract → Copy hex codes → Export CSS variables → Download JSON palette.
 
+
 🚀Features
+
 1.Upload any image (PNG/JPG/WebP)
 2.Extract adaptive palette (up to 256 colors)
 3.View clean color swatches
@@ -12,6 +14,7 @@ Upload → Extract → Copy hex codes → Export CSS variables → Download JSON
 6.Download JSON palette
 7.Gradient + UI preview generated automatically
 
+
 🛠 Tech Stack
 
 1.Python + Flask
@@ -19,6 +22,7 @@ Upload → Extract → Copy hex codes → Export CSS variables → Download JSON
 3.HTML + CSS + JS
 4.Bootstrap 5
 5.Kiro for workflow acceleration
+
 
 Install & Run
 
@@ -44,7 +48,9 @@ pip install -r requirements.txt
 python app.py
 
 Then open
-📍 http://127.0.0.1:5000
+
+http://127.0.0.1:5000
+
 
 📁 Project Structure
 palette-pop/
