@@ -27,7 +27,7 @@ Upload → Extract → Copy hex codes → Export CSS variables → Download JSON
 Install & Run
 
 1️⃣ Clone repository
-git clone https://github.com/<your-username>/palette-pop.git
+git clone https://github.com/Sahaj9333/palette-pop.git
 cd palette-pop
 
 2️⃣ Create virtual environment
