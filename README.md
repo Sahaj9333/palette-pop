@@ -21,6 +21,7 @@ Upload → Extract → Copy hex codes → Export CSS variables → Download JSON
 5.Kiro for workflow acceleration
 
 Install & Run
+
 1️⃣ Clone repository
 git clone https://github.com/<your-username>/palette-pop.git
 cd palette-pop
