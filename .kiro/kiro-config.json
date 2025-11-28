@@ -1,0 +1,8 @@
+{
+  "project": "palette-pop",
+  "tasks": [
+    {"name":"install","cmd":"pip install -r requirements.txt"},
+    {"name":"run","cmd":"python app.py"}
+  ],
+  "notes":"Use Kiro to run install and demo commands, capture short GIF for blog."
+}
