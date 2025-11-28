@@ -30,10 +30,11 @@ cd palette-pop
 python -m venv venv
 
 Activate:
-Windows
+
+Windows:-
 venv\Scripts\activate
 
-Linux/Mac
+Linux/Mac:-
 source venv/bin/activate
 
 3️⃣ Install dependencies
