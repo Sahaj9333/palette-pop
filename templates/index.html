@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Palette Pop — Color Palette Extractor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding: 2rem; background: #f7f7fb; }
+    .dropzone { border: 2px dashed #cbd5e1; padding: 2rem; border-radius: 8px; text-align:center; background: white; }
+    .swatch { width:100%; height:80px; border-radius:6px; position:relative; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; text-shadow: 0 1px 0 rgba(0,0,0,0.2); }
+    .swatch small { position:absolute; bottom:6px; left:8px; background: rgba(255,255,255,0.4); color:#000; padding:2px 6px; border-radius:4px; font-weight:500; }
+    .controls { margin-top:1rem; }
+    .result-grid { display:grid; grid-template-columns: repeat( auto-fit, minmax(140px, 1fr) ); gap:12px; margin-top:1rem; }
+    .sample-box { padding:1rem; border-radius:8px; background:linear-gradient(135deg,#eee,#ddd); }
+    .copy-btn { font-size:0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="mb-1">Palette Pop</h1>
+    <p class="text-muted mb-3">Upload an image and get the top colors instantly. (No options — extracts representative colors automatically.)</p>
+
+    <div class="dropzone" id="dropzone">
+      <p class="mb-1">Drag & drop an image here, or</p>
+      <input type="file" id="fileInput" accept="image/*" />
+      <div class="controls mt-2">
+        <button class="btn btn-primary btn-sm" id="extractBtn">Extract colors</button>
+      </div>
+    </div>
+
+    <div id="loading" class="mt-3" style="display:none;">Extracting colors…</div>
+
+    <div id="results" style="display:none;">
+      <div class="result-grid" id="swatches"></div>
+
+      <div class="mt-3">
+        <button class="btn btn-outline-secondary btn-sm" id="copyCss">Copy CSS variables</button>
+        <button class="btn btn-outline-secondary btn-sm" id="downloadJson">Download JSON</button>
+        <button class="btn btn-outline-secondary btn-sm" id="copyAllHex">Copy all hex</button>
+      </div>
+
+      <h5 class="mt-4">Sample UI</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="sample-box" id="sampleBox">
+            <h4>Button preview</h4>
+            <button class="btn btn-lg" id="sampleBtn">Primary</button>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="sample-box">
+            <h6>Gradient preview</h6>
+            <div id="gradientPreview" style="height:100px;border-radius:8px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const dropzone = document.getElementById('dropzone');
+const extractBtn = document.getElementById('extractBtn');
+const loading = document.getElementById('loading');
+const results = document.getElementById('results');
+const swatches = document.getElementById('swatches');
+const copyCss = document.getElementById('copyCss');
+const downloadJson = document.getElementById('downloadJson');
+const copyAllHex = document.getElementById('copyAllHex');
+const sampleBtn = document.getElementById('sampleBtn');
+const gradientPreview = document.getElementById('gradientPreview');
+
+let selectedFile = null;
+let lastColors = [];
+
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#6c5ce7'; });
+dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = '#cbd5e1'; });
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f) { selectedFile = f; fileInput.files = e.dataTransfer.files; }
+});
+
+fileInput.addEventListener('change', (e) => {
+  if(e.target.files.length) selectedFile = e.target.files[0];
+});
+
+extractBtn.addEventListener('click', async () => {
+  if(!selectedFile) { alert('Please select an image first.'); return; }
+  loading.style.display = 'block';
+  results.style.display = 'none';
+  const form = new FormData();
+  form.append('image', selectedFile);
+  try {
+    const resp = await fetch('/extract', { method:'POST', body: form });
+    const data = await resp.json();
+    if(resp.ok) {
+      lastColors = data.colors || [];
+      renderSwatches(lastColors);
+    } else {
+      alert(data.error || 'Extraction failed');
+      console.error('Server returned', data);
+    }
+  } catch(err) {
+    // Generic fetch failure — show helpful debug hint
+    alert('Failed to fetch. Check that the Flask server is running and look at the browser console / Flask logs for details.');
+    console.error('Fetch error', err);
+  } finally {
+    loading.style.display = 'none';
+  }
+});
+
+function renderSwatches(colors) {
+  swatches.innerHTML = '';
+  // If there's a very large palette, cap the UI rendering to first 128 to avoid browser slowdown
+  const displayColors = colors.slice(0, 128);
+  displayColors.forEach((hex, i) => {
+    const card = document.createElement('div');
+    card.innerHTML = `
+      <div class="swatch" style="background:${hex}">
+        <small>${hex}</small>
+      </div>
+      <div class="d-flex gap-2 mt-1">
+        <button class="btn btn-sm btn-outline-dark copy-btn" data-hex="${hex}">Copy</button>
+        <button class="btn btn-sm btn-outline-dark" data-hex="${hex}">Copy Hex</button>
+      </div>
+    `;
+    swatches.appendChild(card);
+  });
+
+  document.querySelectorAll('.copy-btn').forEach(b => b.addEventListener('click', (e) => {
+    const h = e.currentTarget.getAttribute('data-hex');
+    copyToClipboard(h);
+  }));
+
+  if(colors.length >= 1) {
+    const first = colors[0];
+    sampleBtn.style.background = first;
+    sampleBtn.style.color = getContrastYIQ(first);
+    gradientPreview.style.background = `linear-gradient(135deg, ${colors.slice(0,8).join(', ')})`;
+  } else {
+    sampleBtn.style.background = '#6c5ce7';
+    sampleBtn.style.color = '#fff';
+    gradientPreview.style.background = 'linear-gradient(135deg,#eee,#ddd)';
+  }
+
+  results.style.display = 'block';
+}
+
+function getContrastYIQ(hexcolor){
+  hexcolor = hexcolor.replace('#','');
+  const r = parseInt(hexcolor.substr(0,2),16);
+  const g = parseInt(hexcolor.substr(2,2),16);
+  const b = parseInt(hexcolor.substr(4,2),16);
+  const yiq = ((r*299)+(g*587)+(b*114))/1000;
+  return (yiq >= 128) ? '#000' : '#fff';
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Copied: ' + text);
+  }).catch(err => {
+    console.error('Clipboard failed', err);
+    alert('Copy failed — see console for details.');
+  });
+}
+
+copyCss.addEventListener('click', () => {
+  if(!lastColors.length) return alert('No palette yet');
+  let css = ':root {\n';
+  lastColors.forEach((h, i) => { css += `  --p${i+1}: ${h};\n`; });
+  css += '}';
+  navigator.clipboard.writeText(css).then(()=> alert('CSS variables copied to clipboard'));
+});
+
+copyAllHex.addEventListener('click', () => {
+  if(!lastColors.length) return alert('No palette yet');
+  navigator.clipboard.writeText(lastColors.join(', ')).then(()=> alert('Hex list copied'));
+});
+
+downloadJson.addEventListener('click', () => {
+  if(!lastColors.length) return alert('No palette yet');
+  const content = { palette: lastColors, generated_at: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(content, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'palette.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
